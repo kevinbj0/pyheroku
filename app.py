@@ -2,7 +2,7 @@ import requests
 import json
 
 # Ollama 서버의 ngrok URL
-ngrok_url = "https://1967-221-146-182-123.ngrok-free.app"  # 예: "http://your-ngrok-url.ngrok.io"
+ngrok_url = "https://32a9-221-146-182-123.ngrok-free.app"  # 예: "http://your-ngrok-url.ngrok.io"
 
 # API 엔드포인트
 api_endpoint = f"{ngrok_url}/api/embeddings"
