@@ -1,52 +1,35 @@
-
-# Base
 import os
 import openai
-
-os.environ["OPENAI_API_KEY"] = "sk-proj-ibW3RoqOrHHfvLGf7hE4T3BlbkFJuAzr1ia2Qbhl2KMTm6Yh"
-openai.api_key = os.environ["OPENAI_API_KEY"]
-
 import nest_asyncio
-nest_asyncio.apply()
-
-from llama_index.llms.openai import OpenAI
-# llm=OpenAI(model="gpt-3.5-turbo", temperature=0.1)
 import pandas as pd
-import numpy as np
-from IPython.display import Markdown, display
+from flask import Flask, request, jsonify
+from deep_translator import GoogleTranslator
+from langdetect import detect
+from llama_index.llms.openai import OpenAI
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata, FunctionTool
 from llama_index.experimental.query_engine.pandas import PandasInstructionParser
 from llama_index.experimental.query_engine import PandasQueryEngine
 from llama_index.core import PromptTemplate
-
-from flask import Flask, request, jsonify, Response, make_response
-# from simple_salesforce import Salesforce
-import json
-
-from deep_translator import GoogleTranslator
-# from geopy.geocoders import Nominatim
-from langdetect import detect
-
 from llama_index.core.query_pipeline import (
     QueryPipeline as QP,
     Link,
     InputComponent,
 )
-from llama_index.experimental.query_engine.pandas import (
-    PandasInstructionParser,
-)
-from llama_index.llms.openai import OpenAI
-from llama_index.core import PromptTemplate
+from llama_index.core.llms import ChatMessage
+from llama_index.core.memory import ChatMemoryBuffer
 
-# 파일 업로드 필수 (csv, excel 파일 확인 후 수정필요)
+os.environ["OPENAI_API_KEY"] = "sk-proj-ibW3RoqOrHHfvLGf7hE4T3BlbkFJuAzr1ia2Qbhl2KMTm6Yh"
+openai.api_key = os.environ["OPENAI_API_KEY"]
+
+nest_asyncio.apply()
+
 pd.set_option('display.max_rows', None)
 df = pd.read_csv(r"C:\StudySource\content\data/초급(전자제품)데이터_최종본.csv")
 
 print(df.head())
 
-
-ft_llm = OpenAI(model="gpt-4o")
+ft_llm = OpenAI(model="gpt-4")
 
 instruction_str = (
     "1. Convert the query to executable Python code using Pandas.\n"
@@ -57,7 +40,6 @@ instruction_str = (
     "6. Do not quote the expression.\n"
 )
 
-#시스템
 system_prompt_str = """
     "당신은 대유백화점의 AI 상담원으로 전자제품을 추천하거나 팔고 있습니다.\n"
     "처음 대화를 시작할 때 '안녕하세요 고객님, 대유백화점 AI상담원입니다. 현재 화장품, 전자제품을 취급하고 있습니다. 어떤 품목을 안내해드릴까요?'로 시작해야 한다.\n"
@@ -86,13 +68,9 @@ system_prompt_str = """
     "주문내역을 출력할때는 목록이나 상세정보 같은 다른사항을 출력하면 안되고 오로지 주문내역만을 출력해줘야 합니다.\n"
     "당신은 반드시 pandas_engine을 사용하여 주어진 데이터 'df'에 기반하여 답변해야 합니다.\n"
     """
-# f"""
-# 고객이 '구매할게요','주문할게요', '~개 주세요'와 같이 주문을 하는 말을 했을 경우 제품이 df['특가']=='여름특가'제품인지 조회해보고 만약 '여름특가'제품인 경우 C1)을 실행해야 합니다.\n'여름특가'제품이 아니라면 C1)을 실행하지 않고 주문내역을 출력해주어야 합니다. 주문내역 형식 : '\n================주문내역================\n\n •제품명: df['제품명']\n •브랜드: df['브랜드']\n •결제수량: \n •결제금액: \n df['이미지링크']\n'\n
-# C1)만약 고객이 '여름특가'제품을 주문하는 경우는 주문내역, 상세정보를 출력해선 안되고 다른말 없이 다음과 같이 말해야 합니다.: "해당 제품은 여름특가로 인해 주문이 많아 설치 시기가 늦어질 수 있습니다. 주문을 진행할까요?" 여기서 고객이 "네", "진행할게요", "주문할게요"와 같이 동의하는 답변을 하면, 주문 내역을 출력 후 주문을 마쳐야 합니다. 반면, 고객이 "아니요" 등 반대 의사를 표현하면, 다음과 같이 안내하세요: "네, 고객님. 그렇다면 일주일 내로 설치 가능한 제품들을 추천드리겠습니다." 이때, df['특가']=='여름 특가'가 아닌 에어컨을 추천해야 합니다.\n
-# """
 
 system_prompt = PromptTemplate(system_prompt_str)
-    
+
 pandas_prompt_str = (
     "You are working with a pandas dataframe in Python.\n"
     "The name of the dataframe is `df`.\n"
@@ -124,19 +102,6 @@ pandas_prompt = PromptTemplate(pandas_prompt_str).partial_format(
 )
 pandas_output_parser = PandasInstructionParser(df)
 response_synthesis_prompt = PromptTemplate(response_synthesis_prompt_str)
-# llm = OpenAI(
-#     model="gpt-3.5-turbo",
-#     temperature=0.1,
-# )
-
-# system_prompt="""
-#         당신은 대유의 AI 상담원으로 전자제품, 의류, 화장품을 추천하거나 팔고 있습니다.\n
-#         유의사항1~3의 내용을 그대로 말하지 말고 참고만 해서 답변해야 합니다.\n
-#         처음 대화를 시작할 때 '안녕하세요 대유의 AI상담원입니다.'로 시작해야 합니다.\n
-#         유의사항1) 연령대 컬럼의 숫자들은 연령별 선호도를 뜻합니다.\n
-#         유의사항2) df['성별']은 제품을 선호하는 성별입니다. 예를 들어 '20대 남성이 좋아하는 노트북 있나요'라고 물어보면 df['성별']이 '남성'이고 20대의 선호도가 높은 제품들을 알려주면 됩니다.\n
-#         유의사항3) 상품의 가격을 물어본다면 df['판매가']를 알려주고 df['할인율']이 0보다 크면 할인하는 제품이라고 안내해야 합니다.\n
-#     """
 
 qp = QP(
     modules={
@@ -163,23 +128,16 @@ qp.add_links(
         ),
     ]
 )
-# add link from response synthesis prompt to llm2
-qp.add_link("response_synthesis_prompt", "llm2")
-# add link from response synthesis prompt to llm2
 qp.add_link("response_synthesis_prompt", "llm2")
 
 def check_exit(request_message):
     exit_keywords = ['exit', 'quit', '종료']
     return any(keyword in request_message for keyword in exit_keywords)
 
-from llama_index.core.llms import ChatMessage
-from llama_index.core.memory import ChatMemoryBuffer
-
-# 초기 메모리 버퍼 생성
 pipeline_memory = ChatMemoryBuffer(
-    token_limit=8000,  # 토큰 제한
-    memory_size=100,  # 메모리 버퍼에 저장할 대화 기록의 최대 수
-    truncate_direction='left'  # 버퍼가 가득 찼을 때 오래된 대화부터 삭제
+    token_limit=8000,
+    memory_size=100,
+    truncate_direction='left'
 )
 system_prompt_add = ChatMessage(role="system", content=system_prompt)
 pipeline_memory.put(system_prompt_add)
@@ -191,62 +149,40 @@ def post_example():
     global pipeline_memory
 
     request_data = request.json
-
-    # 들어온 메세지
     request_message = str(request_data.get("Message"))
     print('사용자 : ' + request_message)
 
     if check_exit(request_message):
         pipeline_memory = ChatMemoryBuffer(
-            token_limit=8000,  # 토큰 제한
-            memory_size=100,  # 메모리 버퍼에 저장할 대화 기록의 최대 수
-            truncate_direction='left'  # 버퍼가 가득 찼을 때 오래된 대화부터 삭제
+            token_limit=8000,
+            memory_size=100,
+            truncate_direction='left'
         )
         print('초기화됨')
         system_prompt_add = ChatMessage(role="system", content=system_prompt)
         pipeline_memory.put(system_prompt_add)
-       
 
-    # 입력된 언어 국가판별
-    # dest_language = detect(request_message)
-
-    # 한글로 요청 전송
     translated_request = GoogleTranslator(source='auto', target='ko').translate(request_message)
-    # print('국가코드로 변환 : '+ translated_request)
-
-    # 사용자 입력 메시지를 생성하고 메모리에 추가
     user_msg = ChatMessage(role="user", content=translated_request)
     pipeline_memory.put(user_msg)
 
-    # 메모리에서 채팅 기록을 가져옴
     chat_history = pipeline_memory.get()
-
-    # 채팅 기록을 문자열로 변환
     chat_history_str = "\n".join([str(x) for x in chat_history])
 
-    # ai 응답
     response = qp.run(
         query_str=chat_history_str,
     )
     
     response_message = response.message.content
-    
-    # 받은 답변 한국어로
     translated_response = GoogleTranslator(source='auto', target='ko').translate(str(response_message))
 
-     # 응답 메시지를 메모리에 추가
     response_msg = ChatMessage(role="assistant", content=translated_response)
     pipeline_memory.put(response_msg)
 
     print('답변 : ' + translated_response)
 
-    # json 파일로 변환
     response_json = json.dumps({'message' : translated_response}, ensure_ascii=False)
-
     return response_json
 
 if __name__ == '__main__':
     app.run(debug=True, host='localhost', port=8080)
-
-
-
