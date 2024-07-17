@@ -11,7 +11,7 @@ def hello():
     
     try:
         # CSV 파일 읽기
-        df = pd.read_csv(csv_file_path)
+        df = pd.read_csv(csv_file_path, encoding='utf-8')
         pd.set_option('display.max_rows', None)
         return df.head().to_json(orient='records')
     except FileNotFoundError:
