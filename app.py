@@ -7,12 +7,10 @@ ngrok_url = "https://8c5d-221-146-182-123.ngrok-free.app"  # 예: "http://your-n
 # API 엔드포인트
 api_endpoint = f"{ngrok_url}/api/embeddings"
 
-user_input = input("Enter your text: ")
-
 # 요청할 텍스트 데이터
 data = {
     "model": "nomic-embed-text",
-    "prompt": user_input
+    "prompt": "The sky is blue because of Rayleigh scattering"
 }
 
 # 요청 헤더
