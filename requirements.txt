@@ -9,3 +9,4 @@ h11==0.14.0
 llama_index
 deep_translator
 langdetect
+IPython
