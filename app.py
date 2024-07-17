@@ -13,7 +13,7 @@ def hello():
         # CSV 파일 읽기
         df = pd.read_csv(csv_file_path, encoding='utf-8')
         pd.set_option('display.max_rows', None)
-        return df.head().to_json(orient='records')
+        return df.head().to_json(orient='records', force_ascii=False)
     except FileNotFoundError:
         return jsonify({"error": f"CSV file not found at {csv_file_path}"}), 404
 
