@@ -1,24 +1,21 @@
 import os
 import pandas as pd
-import requests
-import json
-from flask import Flask
-
-
-
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 @app.route('/')
 def hello():
     # CSV 파일 경로
-    csv_file_path = os.path.join("data", "초급(전자제품)데이터_최종본.csv")
+    csv_file_path = os.path.join(os.path.dirname(__file__), "data", "초급(전자제품)데이터_최종본.csv")
     
-    # CSV 파일 읽기
-    df = pd.read_csv(csv_file_path)
-    pd.set_option('display.max_rows', None)
-    print(df.head())
-    return df.head()
+    try:
+        # CSV 파일 읽기
+        df = pd.read_csv(csv_file_path)
+        pd.set_option('display.max_rows', None)
+        return df.head().to_json(orient='records')
+    except FileNotFoundError:
+        return jsonify({"error": f"CSV file not found at {csv_file_path}"}), 404
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
