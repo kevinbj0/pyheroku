@@ -2,7 +2,7 @@
 import os
 import openai
 
-os.environ["OPENAI_API_KEY"] = "sk-proj-ibW3RoqOrHHfvLGf7hE4T3BlbkFJuAzr1ia2Qbhl2KMTm6Yh"
+os.environ["OPENAI_API_KEY"] = "sk-proj-xwda7kcozU8X35veql9VT3BlbkFJ6cVS1LUIVA9VJnGE39oU"
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 import nest_asyncio
