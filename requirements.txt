@@ -11,5 +11,4 @@ deep_translator
 langdetect
 IPython
 llama_index.core
-llama_index.core
 llama_index.experimental
