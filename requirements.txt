@@ -10,3 +10,8 @@ llama_index
 deep_translator
 langdetect
 IPython
+llama_index.core
+llama_index.agent.openai
+llama_index.llms
+llama_index.core
+llama_index.experimental
