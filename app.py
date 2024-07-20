@@ -162,7 +162,7 @@ pipeline_memory.put(system_prompt_add)
 
 app = Flask(__name__)
 
-@app.route('/', methods=["GET","POST"])
+@app.route('/', methods=["POST"])
 def post_example():
     global pipeline_memory
 
