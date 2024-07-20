@@ -8,5 +8,6 @@ numpy==1.26.4
 h11==0.14.0
 llama_index
 deep_translator
+googletrans==4.0.0-rc1
 langdetect
 IPython
