@@ -1,19 +1,32 @@
+from flask import Flask
+import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-DATABASE_URL = 'postgresql://postgres:1234@221.146.182.123:5432/koreanBeef'
+app = Flask(__name__)
 
-def test_db_connection():
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:1234@<공인 IP>:5432/koreanBeef')
+
+def get_db_connection():
     try:
         conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+
+@app.route('/')
+def hello():
+    conn = get_db_connection()
+    if conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT version();")
+        cursor.execute('SELECT version();')
         db_version = cursor.fetchone()
-        print(f"Connected to PostgreSQL Database - Version: {db_version}")
         cursor.close()
         conn.close()
-    except Exception as error:
-        print(f"Error connecting to PostgreSQL Database: {error}")
+        return f"Connected to PostgreSQL Database - Version: {db_version}"
+    else:
+        return "Failed to connect to database"
 
-if __name__ == "__main__":
-    test_db_connection()
+if __name__ == '__main__':
+    app.run()
