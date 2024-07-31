@@ -32,9 +32,9 @@ nest_asyncio.apply()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Salesforce 연결 설정
-SF_USERNAME = 'kevinbj123@daeunextier.com'
-SF_PASSWORD = '@@@@@Asd3068314'
-SF_SECURITY_TOKEN = 'GS8HqcMb8XogSvipDO0x4DSFv'
+SF_USERNAME = os.environ.get('SF_USERNAME')
+SF_PASSWORD = os.environ.get('SF_PASSWORD')
+SF_SECURITY_TOKEN = os.environ.get('SF_SECURITY_TOKEN')
 
 app = Flask(__name__)
 
