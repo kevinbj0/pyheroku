@@ -36,7 +36,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core import PromptTemplate
 
 # 데이터베이스 연결 설정
-DATABASE_URL = 'jdbc:postgresql://192.168.1.23:5432/koreanBeef'
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 app = Flask(__name__)
 
