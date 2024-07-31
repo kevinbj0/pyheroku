@@ -51,10 +51,9 @@ def get_salesforce_connection():
 def get_data_from_salesforce():
     sf = get_salesforce_connection()
     if sf:
-        query = "SELECT Name, Brand__c, Classification__c FROM Product2"
+        query = "SELECT Brand__c, Classification__c, Name FROM Product2"
         result = sf.query_all(query)
         df = pd.DataFrame(result['records'])
-        print(df)
         return df
     else:
         return pd.DataFrame()
