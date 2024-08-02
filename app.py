@@ -1,29 +1,12 @@
 import os
 import openai
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import requests
+from flask import Flask, request, jsonify
+from llama_index.llms.openai import OpenAI
+import pandas as pd
 import nest_asyncio
 nest_asyncio.apply()
-from llama_index.llms.openai import OpenAI
-
-# OpenAI API 키 설정
-openai.api_key = os.environ["OPENAI_API_KEY"]
-
-import pandas as pd
-import numpy as np
-from IPython.display import Markdown, display
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.core.tools import QueryEngineTool, ToolMetadata, FunctionTool
-from llama_index.experimental.query_engine.pandas import PandasInstructionParser
-from llama_index.experimental.query_engine import PandasQueryEngine
 from llama_index.core import PromptTemplate
-
-from flask import Flask, request, jsonify, Response, make_response
-import json
-
-from deep_translator import GoogleTranslator
-from langdetect import detect
-
 from llama_index.core.query_pipeline import (
     QueryPipeline as QP,
     Link,
@@ -32,42 +15,15 @@ from llama_index.core.query_pipeline import (
 from llama_index.experimental.query_engine.pandas import (
     PandasInstructionParser,
 )
-from llama_index.llms.openai import OpenAI
-from llama_index.core import PromptTemplate
+from llama_index.core.llms import ChatMessage
+from llama_index.core.memory import ChatMemoryBuffer
+from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
 
-# 데이터베이스 연결 함수
-def get_db_connection():
-    # 연결정보
-    conn = psycopg2.connect(
-        dbname=os.environ['DBNAME'], 
-        user=os.environ['USER'], 
-        password=os.environ['PASSWORD'], 
-        host=os.environ['HOST'], 
-        port=os.environ['POSTGRES_PORT'],
-        cursor_factory=RealDictCursor
-    )
-    return conn
+# OpenAI API 키 설정
+openai.api_key = os.environ["OPENAI_API_KEY"]
 
-# 데이터베이스에서 데이터를 읽어오는 함수
-def get_data_from_db():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM mprice')  # 필요한 데이터만 가져오기
-        rows = cursor.fetchall()
-        df = pd.DataFrame(rows)
-        cursor.close()
-        conn.close()
-        print(df)
-        return df
-    except Exception as e:
-        print(f"Error reading from the database: {e}")
-        return pd.DataFrame()
-
-
-						   
 ft_llm = OpenAI(model="gpt-4o-mini")
 
 instruction_str = (
@@ -106,11 +62,27 @@ response_synthesis_prompt_str = (
     "Response: "
 )
 
-# 새로운 요청마다 데이터베이스에서 데이터를 가져오기 위한 부분
+# URL에서 데이터를 가져오는 함수
+def get_data_from_url():
+    try:
+        url = 'https://8ca9-221-146-182-45.ngrok-free.app/data'
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            df = pd.DataFrame(data)
+            print(df)
+            return df
+        else:
+            print(f"Failed to retrieve data: {response.status_code}")
+            return pd.DataFrame()
+    except Exception as e:
+        print(f"Error reading from the URL: {e}")
+        return pd.DataFrame()
+
 @app.before_request
 def before_request():
     global df
-    df = get_data_from_db()
+    df = get_data_from_url()
     pandas_prompt = PromptTemplate(pandas_prompt_str).partial_format(
         instruction_str=instruction_str, df_str=df.head(5)
     )
@@ -143,15 +115,11 @@ def before_request():
             ),
         ]
     )
-												 
     qp.add_link("response_synthesis_prompt", "llm2")
 
 def check_exit(request_message):
     exit_keywords = ['exit', 'quit', '종료']
     return any(keyword in request_message for keyword in exit_keywords)
-
-from llama_index.core.llms import ChatMessage
-from llama_index.core.memory import ChatMemoryBuffer
 
 # 초기 메모리 버퍼 생성
 pipeline_memory = ChatMemoryBuffer(
@@ -161,7 +129,6 @@ pipeline_memory = ChatMemoryBuffer(
 )
 system_prompt_add = ChatMessage(role="system", content=system_prompt)
 pipeline_memory.put(system_prompt_add)
-
 
 @app.route('/', methods=["GET","POST"])
 def post_example():
