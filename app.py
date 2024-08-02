@@ -35,19 +35,37 @@ from llama_index.experimental.query_engine.pandas import (
 from llama_index.llms.openai import OpenAI
 from llama_index.core import PromptTemplate
 
+								  
+																	   
+
 app = Flask(__name__)
 
 # 데이터베이스 연결 함수
 def get_db_connection():
     # 연결정보
+    # conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     conn = psycopg2.connect(
-        dbname=os.getenv('DBNAME'), 
-        user=os.getenv('USER'), 
-        password=os.getenv('PASSWORD'), 
-        host=os.getenv('HOST'), 
-        port=os.getenv('PORT'),
-        cursor_factory=RealDictCursor
+    dbname='koreanBeef', 
+    user='postgres', 
+    password='1234', 
+    host='192.168.1.23', 
+    # 221.146.182.123
+    # 192.168.1.23
+    port='5432',
+    cursor_factory=RealDictCursor
     )
+
+    # conn = psycopg2.connect(
+    #     dbname=os.getenv('DBNAME'), 
+    #     user=os.getenv('USER'), 
+    #     password=os.getenv('PASSWORD'), 
+    #     host=os.getenv('HOST'), 
+    #     port=os.getenv('PORT'),
+    #     cursor_factory=RealDictCursor
+    # )
+
+							
+	
     return conn
 
 # 데이터베이스에서 데이터를 읽어오는 함수
