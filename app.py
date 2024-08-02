@@ -1,31 +1,42 @@
 import os
 import openai
 import requests
-from flask import Flask, request, jsonify
-from llama_index.llms.openai import OpenAI
+import asyncio
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 import pandas as pd
-import nest_asyncio
-nest_asyncio.apply()
+from llama_index.llms.openai import OpenAI
+				   
+				   
+					
 from llama_index.core import PromptTemplate
-from llama_index.core.query_pipeline import (
-    QueryPipeline as QP,
-    Link,
-    InputComponent,
-)
-from llama_index.experimental.query_engine.pandas import (
-    PandasInstructionParser,
-)
+from llama_index.core.query_pipeline import QueryPipeline as QP, Link, InputComponent
+from llama_index.experimental.query_engine.pandas import PandasInstructionParser
+							
+ 
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from deep_translator import GoogleTranslator
 
-app = Flask(__name__)
+# FastAPI 앱 설정
+app = FastAPI()
 
 # OpenAI API 키 설정
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
+# OpenAI 모델 설정
 ft_llm = OpenAI(model="gpt-4o-mini")
 
+# 시스템 프롬프트 설정
+system_prompt_str = """
+    "당신은 대유백화점의 AI 상담원으로 소고기를 추천하거나 팔고 있습니다.\n"
+    """
+system_prompt = PromptTemplate(system_prompt_str)
+
+# 데이터프레임 설정
+df = pd.DataFrame()  # 초기 빈 데이터프레임
+
+# Pandas 프롬프트 템플릿 설정
 instruction_str = (
     "1. Convert the query to executable Python code using Pandas.\n"
     "2. The final line of code should be a Python expression that can be called with the `eval()` function.\n"
@@ -34,13 +45,6 @@ instruction_str = (
     "5. All response related to '상품분류', '카테고리, '제품명', '브랜드' should constrainted to this df. you are not permitted to call product details from ft_llm"
     "6. Do not quote the expression.\n"
 )
-
-# 시스템 프롬프트
-system_prompt_str = """
-    "당신은 대유백화점의 AI 상담원으로 소고기를 추천하거나 팔고 있습니다.\n"
-    """
-
-system_prompt = PromptTemplate(system_prompt_str)
 
 pandas_prompt_str = (
     "You are working with a pandas dataframe in Python.\n"
@@ -70,7 +74,7 @@ def get_data_from_url():
         if response.status_code == 200:
             data = response.json()
             df = pd.DataFrame(data)
-            print(df)
+            print(df.head())
             return df
         else:
             print(f"Failed to retrieve data: {response.status_code}")
@@ -79,9 +83,9 @@ def get_data_from_url():
         print(f"Error reading from the URL: {e}")
         return pd.DataFrame()
 
-@app.before_request
-def before_request():
-    global df
+@app.on_event("startup")
+async def startup_event():
+    global df, qp
     df = get_data_from_url()
     pandas_prompt = PromptTemplate(pandas_prompt_str).partial_format(
         instruction_str=instruction_str, df_str=df.head(5)
@@ -89,7 +93,7 @@ def before_request():
     pandas_output_parser = PandasInstructionParser(df)
     response_synthesis_prompt = PromptTemplate(response_synthesis_prompt_str)
 
-    global qp
+			 
     qp = QP(
         modules={
             "input": InputComponent(),
@@ -123,35 +127,36 @@ def check_exit(request_message):
 
 # 초기 메모리 버퍼 생성
 pipeline_memory = ChatMemoryBuffer(
-    token_limit=8000,  # 토큰 제한
-    memory_size=100,  # 메모리 버퍼에 저장할 대화 기록의 최대 수
-    truncate_direction='left'  # 버퍼가 가득 찼을 때 오래된 대화부터 삭제
+    token_limit=8000,
+    memory_size=100,
+    truncate_direction='left'
 )
 system_prompt_add = ChatMessage(role="system", content=system_prompt)
 pipeline_memory.put(system_prompt_add)
 
-@app.route('/', methods=["GET","POST"])
-def post_example():
+@app.post('/')
+async def post_example(request: Request):
     global pipeline_memory
 
-    if request.content_type != 'application/json':
-        return jsonify({"error": "Unsupported Media Type. Expected 'application/json'"}), 415
+												  
+																							 
 
-    request_data = request.json
+    request_data = await request.json()
 
-    # 들어온 메세지
+						 
     request_message = str(request_data.get("Message"))
     print('사용자 : ' + request_message)
 
     if check_exit(request_message):
         pipeline_memory = ChatMemoryBuffer(
-            token_limit=8000,  # 토큰 제한
-            memory_size=100,  # 메모리 버퍼에 저장할 대화 기록의 최대 수
-            truncate_direction='left'  # 버퍼가 가득 찼을 때 오래된 대화부터 삭제
+            token_limit=8000,
+            memory_size=100,
+            truncate_direction='left'
         )
         print('초기화됨')
         system_prompt_add = ChatMessage(role="system", content=system_prompt)
         pipeline_memory.put(system_prompt_add)
+        return JSONResponse(content={'message': '초기화되었습니다.'})
 
     # 한글로 요청 전송
     translated_request = GoogleTranslator(source='auto', target='ko').translate(request_message)
@@ -167,12 +172,12 @@ def post_example():
     chat_history_str = "\n".join([str(x) for x in chat_history])
 
     # ai 응답
-    response = qp.run(
-        query_str=chat_history_str,
-    )
-    
+					  
+    response = await asyncio.to_thread(qp.run, query_str=chat_history_str)
+	 
+	
     response_message = response.message.content
-    
+
     # 받은 답변 한국어로
     translated_response = GoogleTranslator(source='auto', target='ko').translate(str(response_message))
 
@@ -183,8 +188,9 @@ def post_example():
     print('답변 : ' + translated_response)
 
     # JSON 응답 반환
-    return jsonify({'message' : translated_response})
+    return JSONResponse(content={'message': translated_response})
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    import uvicorn
+    postgres_port = int(os.environ.get("PORT", 5000))
+    uvicorn.run(app, host='0.0.0.0', port=postgres_port)
