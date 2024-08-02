@@ -29,12 +29,12 @@ from llama_index.core import PromptTemplate
 nest_asyncio.apply()
 
 # OpenAI API 키 설정
-openai.api_key = os.environ("OPENAI_API_KEY")
+openai.api_key = os.environ["OPENAI_API_KEY"]
 
 # Salesforce 연결 설정
-SF_USERNAME = os.environ('SF_USERNAME')
-SF_PASSWORD = os.environ('SF_PASSWORD')
-SF_SECURITY_TOKEN = os.environ('SF_SECURITY_TOKEN')
+SF_USERNAME = os.environ['SF_USERNAME']
+SF_PASSWORD = os.environ['SF_PASSWORD']
+SF_SECURITY_TOKEN = os.environ['SF_SECURITY_TOKEN']
 
 app = Flask(__name__)
 
