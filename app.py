@@ -5,8 +5,10 @@ from psycopg2.extras import RealDictCursor
 import nest_asyncio
 nest_asyncio.apply()
 from llama_index.llms.openai import OpenAI
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+# OpenAI API 키 설정
 openai.api_key = os.environ["OPENAI_API_KEY"]
+
 import pandas as pd
 import numpy as np
 from IPython.display import Markdown, display
@@ -37,8 +39,15 @@ app = Flask(__name__)
 
 # 데이터베이스 연결 함수
 def get_db_connection():
-    DATABASE_URL = os.getenv('DATABASE_URL')
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # 연결정보
+    conn = psycopg2.connect(
+        dbname=os.environ['DBNAME'], 
+        user=os.environ['USER'], 
+        password=os.environ['PASSWORD'], 
+        host=os.environ['HOST'], 
+        port=os.environ['POSTGRES_PORT'],
+        cursor_factory=RealDictCursor
+    )
     return conn
 
 # 데이터베이스에서 데이터를 읽어오는 함수
@@ -46,7 +55,7 @@ def get_data_from_db():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM mprice')
+        cursor.execute('SELECT * FROM mprice LIMIT 10')  # 필요한 데이터만 가져오기
         rows = cursor.fetchall()
         df = pd.DataFrame(rows)
         cursor.close()
@@ -57,7 +66,8 @@ def get_data_from_db():
         print(f"Error reading from the database: {e}")
         return pd.DataFrame()
 
-                           
+
+						   
 ft_llm = OpenAI(model="gpt-4o-mini")
 
 instruction_str = (
@@ -133,7 +143,7 @@ def before_request():
             ),
         ]
     )
-                                                 
+												 
     qp.add_link("response_synthesis_prompt", "llm2")
 
 def check_exit(request_message):
