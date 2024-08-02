@@ -65,7 +65,7 @@ response_synthesis_prompt_str = (
 # URL에서 데이터를 가져오는 함수
 def get_data_from_url():
     try:
-        url = 'https://8ca9-221-146-182-45.ngrok-free.app/data'
+        url = os.environ["DATABASE_URL"]
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
