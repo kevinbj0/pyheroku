@@ -14,3 +14,4 @@ llama_index.core
 llama_index.experimental
 psycopg2
 Salesforce
+FastAPI
