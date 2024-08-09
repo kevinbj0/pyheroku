@@ -70,7 +70,6 @@ response_synthesis_prompt_str = (
 def get_data_from_url():
     try:
         url = os.environ["DATABASE_URL"]
-	print(url)
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
