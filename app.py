@@ -100,7 +100,7 @@ def before_request():
 			"response_synthesis_prompt": response_synthesis_prompt,
 			"llm2": ft_llm,
 		},
-		verbose=False,
+		verbose=True,
 	)
 	qp.add_chain(["input", "pandas_prompt", "llm1", "pandas_output_parser"])
 	qp.add_links(
