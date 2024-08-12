@@ -66,13 +66,13 @@ instruction_str = (
     "2. The final line of code should be a Python expression that can be called with the `eval()` function.\n"
     "3. The code should represent a solution to the query.\n"
     "4. PRINT ONLY THE EXPRESSION.\n"
-    "5. All response related to '상품분류', '카테고리, '제품명', '브랜드' should be constrained to this df. you are not permitted to call product details from ft_llm\n"
-    "6. Do not quote the expression.\n"
+    "5. Do not quote the expression.\n"
 )
 
 # 시스템 프롬프트
 system_prompt_str = """
     "당신은 대유백화점의 AI 상담원으로 고기를 추천하거나 팔고 있습니다.\n"
+    "df['Grade__c']는 고기 등급, df['Name']은 고기종류, df['PackageUnit__c']은 포장단위, df['Price__c']은 가격, df['SalesUnit__c']은 판매단위 입니다.\n"
     """
 
 system_prompt = PromptTemplate(system_prompt_str)
